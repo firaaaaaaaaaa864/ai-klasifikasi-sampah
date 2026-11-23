@@ -5,39 +5,75 @@ import numpy as np
 from streamlit_paste_button import paste_image_button
 import io
 
-# 1. Konfigurasi Halaman & Tema Warna Hijau-Biru (Support Light & Dark Mode)
+# 1. Konfigurasi Halaman & Tema Warna Hijau-Biru (Anti Dark-Mode Gelap)
 st.set_page_config(page_title="EcoSort AI - Klasifikasi Sampah", page_icon="♻️", layout="wide")
 
 st.markdown("""
     <style>
-    /* Latar belakang gradasi hijau toska ke biru lembut */
+    /* Latar belakang gradasi hijau mint ke biru lembut */
     .stApp {
-        background: linear-gradient(135deg, #d4f1f4 0%, #d8f3dc 50%, #cdeac0 100%);
+        background: linear-gradient(135deg, #d4f1f4 0%, #d8f3dc 50%, #cdeac0 100%) !important;
     }
-    /* Paksa teks utama di luar kartu tetap gelap & jelas terbaca */
-    .stApp, .stApp p, .stApp label, .stApp span {
+    /* Paksa semua teks biasa berwarna gelap agar terbaca jelas */
+    .stApp p, .stApp label, .stApp li, .stApp div {
         color: #102a43 !important;
     }
     h1, h2, h3 {
         color: #005f73 !important;
     }
-    /* Kotak kartu hasil prediksi putih bersih */
+    /* Hilangkan blok hitam pada tag kode (`...`) dan ganti jadi hijau lembut */
+    code {
+        background-color: #e0f2f1 !important;
+        color: #004d40 !important;
+        padding: 3px 8px !important;
+        border-radius: 6px !important;
+        font-weight: bold !important;
+    }
+    /* Ubah kotak peringatan (st.warning) dari cokelat gelap menjadi kuning cerah */
+    div[data-testid="stAlert"] {
+        background-color: #fff8e1 !important;
+        border: 1px solid #ffca28 !important;
+        border-left: 6px solid #ffb300 !important;
+        border-radius: 10px !important;
+    }
+    div[data-testid="stAlert"] p {
+        color: #5d4037 !important;
+    }
+    /* Ubah kotak Expander (Kemungkinan #1, #2, #3) menjadi putih bersih */
+    div[data-testid="stExpander"] {
+        background-color: #ffffff !important;
+        border: 1px solid #b2dfdb !important;
+        border-radius: 10px !important;
+    }
+    div[data-testid="stExpander"] summary {
+        background-color: #f0fdf4 !important;
+        color: #004d40 !important;
+        border-radius: 10px !important;
+    }
+    /* Kotak kartu hasil prediksi */
     .result-card {
-        background-color: #ffffff;
+        background-color: #ffffff !important;
         padding: 22px;
         border-radius: 16px;
         border-left: 8px solid #0a9396;
         box-shadow: 0 6px 16px rgba(0, 95, 115, 0.12);
         margin-bottom: 20px;
     }
-    /* Badge persentase */
+    /* Badge persentase biru toska dengan teks putih terang */
     .badge-score {
-        background-color: #005f73;
+        background-color: #0077b6 !important;
         color: #ffffff !important;
-        padding: 4px 10px;
+        padding: 4px 12px;
         border-radius: 8px;
         font-weight: bold;
         font-size: 0.9em;
+        display: inline-block;
+    }
+    /* Warna link agar jelas terbaca */
+    a {
+        color: #0077b6 !important;
+        font-weight: 600 !important;
+        text-decoration: underline !important;
     }
     </style>
 """, unsafe_allow_html=True)

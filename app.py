@@ -50,19 +50,27 @@ st.markdown("""
         color: #ffffff !important;
     }
 
-    /* === CERAHKAN TOMBOL + TAMBAH GAMBAR (POPOVER) === */
-    div[data-testid="stPopover"] > button {
-        background-color: #00897b !important;
-        color: #ffffff !important;
+    /* === CERAHKAN TOMBOL + TAMBAH GAMBAR (POPOVER) DENGAN TULISAN BIRU TERANG === */
+    button[data-testid="stPopoverButton"],
+    div[data-testid="stPopover"] button {
+        background-color: #ffffff !important;
+        border: 2.5px solid #0077b6 !important;
         border-radius: 12px !important;
         padding: 10px 22px !important;
-        font-size: 1.05em !important;
-        font-weight: bold !important;
-        border: none !important;
-        box-shadow: 0 4px 10px rgba(0, 137, 123, 0.25) !important;
+        box-shadow: 0 4px 12px rgba(0, 119, 182, 0.18) !important;
     }
-    div[data-testid="stPopover"] > button * {
-        color: #ffffff !important;
+    button[data-testid="stPopoverButton"] p,
+    button[data-testid="stPopoverButton"] span,
+    div[data-testid="stPopover"] button p,
+    div[data-testid="stPopover"] button span {
+        color: #0077b6 !important;
+        font-size: 1.05em !important;
+        font-weight: 800 !important;
+    }
+    button[data-testid="stPopoverButton"]:hover,
+    div[data-testid="stPopover"] button:hover {
+        background-color: #e0f7fa !important;
+        border-color: #0096c7 !important;
     }
     /* Isi kotak popup saat tombol + diklik */
     div[data-testid="stPopoverBody"] {
@@ -161,7 +169,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.title("♻️ EcoSort AI: Sistem Identifikasi & Pengelolaan Sampah")
-st.write("Klik tombol **➕ Tambah Gambar** di bawah untuk mengunggah foto, menempel gambar hasil *copy*, atau mengambil foto langsung dari kamera (**Maksimal 5 foto**).")
+st.write("Klik tombol **➕ Tambah / Pilih Sumber Gambar** di bawah untuk mengunggah foto, menempel gambar hasil *copy*, atau mengambil foto langsung dari kamera (**Maksimal 5 foto**).")
 
 # 2. Load Model AI
 @st.cache_resource
@@ -303,7 +311,7 @@ if "aktifkan_kamera" not in st.session_state:
     st.session_state.aktifkan_kamera = False
 
 # 5. Menu Input Terpadu di Halaman yang Sama (Dalam Tanda +)
-col_plus, col_reset, col_spacer = st.columns([1.6, 1.8, 3])
+col_plus, col_reset, col_spacer = st.columns([1.8, 1.8, 2.8])
 
 with col_plus:
     with st.popover("➕ Tambah / Pilih Sumber Gambar", use_container_width=True):
@@ -411,36 +419,4 @@ if daftar_gambar:
             col1, col2 = st.columns([1, 2.3])
             
             with col1:
-                st.image(image, caption=f"Foto {idx+1}: {item['name']}", use_container_width=True)
-                
-            with col2:
-                st.subheader(f"🏷️ Prediksi Utama: {detail1['nama']} ({top1_key})")
-                st.markdown(
-                    f"**Kategori Kelas:** `{detail1['kelas_utama']}` &nbsp;|&nbsp; "
-                    f"<span class='badge-score'>Keyakinan AI: {top1_conf:.2f}%</span>", 
-                    unsafe_allow_html=True
-                )
-                
-                # Jika keyakinan di bawah 75%, tampilkan kotak kuning terang + 3 kemungkinan
-                if top1_conf < 75.0:
-                    st.markdown("""
-                        <div class="warning-box">
-                            🤔 <b>AI Ragu / Keyakinan Rendah (&lt;75%)</b> — Objek ini bertumpuk, ramai latar belakangnya, atau sudah berbentuk kerajinan daur ulang. Berikut <b>3 kemungkinan jenis sampah</b> yang dicurigai AI:
-                        </div>
-                    """, unsafe_allow_html=True)
-                    
-                    for rank, c_idx in enumerate(top3_indices, start=1):
-                        c_key = CLASS_NAMES[c_idx]
-                        c_conf = predictions[c_idx] * 100
-                        c_info = INFO_SAMPAH[c_key]
-                        with st.expander(f"Kemungkinan {rank} : {c_info['nama']} ({c_key}) — Perkiraan {c_conf:.0f}%", expanded=(rank == 2)):
-                            st.write(f"**Kategori Kelas:** `{c_info['kelas_utama']}`")
-                            st.write(f"**Saran Pengelolaan:** {c_info['keterangan']}")
-                            st.markdown(f"**{c_info['aksi_judul']}** [{c_info['link_aksi_nama']}]({c_info['link_aksi_url']})")
-                            st.markdown(f"**Tutorial:** [{c_info['link_video_nama']}]({c_info['link_video_url']})")
-                
-                st.markdown("---")
-                st.write(f"**Saran Pengelolaan (Prediksi Utama):** {detail1['keterangan']}")
-                st.markdown(f"**{detail1['aksi_judul']}** [{detail1['link_aksi_nama']}]({detail1['link_aksi_url']})")
-                st.markdown(f"**Tutorial Pengolahan:** [{detail1['link_video_nama']}]({detail1['link_video_url']})")
-            st.markdown('</div>', unsafe_allow_html=True)
+                st.image(image, caption=f"Foto {idx+1}: {item

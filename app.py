@@ -5,28 +5,39 @@ import numpy as np
 from streamlit_paste_button import paste_image_button
 import io
 
-# 1. Konfigurasi Halaman & Tema Warna Hijau-Biru (Custom CSS)
+# 1. Konfigurasi Halaman & Tema Warna Hijau-Biru (Support Light & Dark Mode)
 st.set_page_config(page_title="EcoSort AI - Klasifikasi Sampah", page_icon="♻️", layout="wide")
 
 st.markdown("""
     <style>
-    /* Latar belakang gradasi hijau mint ke biru muda lembut */
+    /* Latar belakang gradasi hijau toska ke biru lembut */
     .stApp {
-        background: linear-gradient(135deg, #e0f7fa 0%, #e8f5e9 50%, #e3f2fd 100%);
-        color: #1b3b2b;
+        background: linear-gradient(135deg, #d4f1f4 0%, #d8f3dc 50%, #cdeac0 100%);
     }
-    /* Kotak kartu hasil prediksi */
+    /* Paksa teks utama di luar kartu tetap gelap & jelas terbaca */
+    .stApp, .stApp p, .stApp label, .stApp span {
+        color: #102a43 !important;
+    }
+    h1, h2, h3 {
+        color: #005f73 !important;
+    }
+    /* Kotak kartu hasil prediksi putih bersih */
     .result-card {
-        background-color: rgba(255, 255, 255, 0.92);
-        padding: 20px;
-        border-radius: 15px;
-        border-left: 6px solid #00897b;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-        margin-bottom: 15px;
+        background-color: #ffffff;
+        padding: 22px;
+        border-radius: 16px;
+        border-left: 8px solid #0a9396;
+        box-shadow: 0 6px 16px rgba(0, 95, 115, 0.12);
+        margin-bottom: 20px;
     }
-    /* Judul utama */
-    h1 {
-        color: #00695c !important;
+    /* Badge persentase */
+    .badge-score {
+        background-color: #005f73;
+        color: #ffffff !important;
+        padding: 4px 10px;
+        border-radius: 8px;
+        font-weight: bold;
+        font-size: 0.9em;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -48,7 +59,7 @@ INFO_SAMPAH = {
         "kelas_utama": "B3 (Bahan Berbahaya & Beracun)",
         "keterangan": "Mengandung logam berat berbahaya. Jangan dibuang ke tempat sampah biasa atau dibakar.",
         "aksi_judul": "📍 Tempat Penyaluran Limbah B3 / Elektronik di Indonesia:",
-        "link_aksi_nama": "Drop Box E-Waste RJ (Jakarta & Sekitarnya) / Dinas LH Kota",
+        "link_aksi_nama": "Drop Box E-Waste RJ / Dinas LH Kota",
         "link_aksi_url": "https://ewasterj.com/",
         "link_video_nama": "▶️ Video Cara Aman Menyimpan & Menyalurkan Baterai Bekas",
         "link_video_url": "https://www.youtube.com/results?search_query=cara+membuang+limbah+baterai+bekas+yang+benar"
@@ -88,7 +99,7 @@ INFO_SAMPAH = {
         "kelas_utama": "Anorganik (Guna Ulang / Daur Ulang Tekstil)",
         "keterangan": "Pakaian layak pakai bisa didonasikan; pakaian rusak bisa didaur ulang menjadi kain perca/benang baru.",
         "aksi_judul": "🤝 Platform Donasi & Daur Ulang Pakaian di Indonesia:",
-        "link_aksi_nama": "Kitabisa.com (Donasi Pakaian) / Setali Indonesia (Daur Ulang Baju)",
+        "link_aksi_nama": "Kitabisa.com (Donasi Pakaian) / Setali Indonesia",
         "link_aksi_url": "https://kitabisa.com/explore/panti-asuhan",
         "link_video_nama": "▶️ Video Ide Mengubah Baju Bekas Menjadi Tas / Keset",
         "link_video_url": "https://www.youtube.com/results?search_query=cara+mendaur+ulang+baju+bekas+menjadi+barang+berguna"
@@ -200,7 +211,6 @@ with tab2:
             st.rerun()
 
     if paste_result.image_data is not None:
-        # Cegah duplikasi gambar yang sama persis saat halaman refresh
         img_bytes = io.BytesIO()
         paste_result.image_data.save(img_bytes, format="PNG")
         img_val = img_bytes.getvalue()
@@ -214,14 +224,14 @@ with tab2:
             else:
                 st.warning("⚠️ Sudah mencapai batas maksimal 5 gambar tempelan!")
 
-# Gabungkan daftar gambar yang akan diproses
+# Gabungkan daftar gambar
 daftar_gambar = []
 for f in uploaded_files:
     daftar_gambar.append({"image": Image.open(f).convert("RGB"), "name": f.name})
 for p in st.session_state.pasted_images:
     daftar_gambar.append({"image": p["image"], "name": p["name"]})
 
-# 6. Proses Prediksi & Tampilkan Hasil
+# 6. Proses Prediksi & Tampilkan Top-3 Kemungkinan
 if daftar_gambar:
     if len(daftar_gambar) > 5:
         st.error(f"⚠️ Batas maksimal adalah 5 foto sekaligus! Saat ini ada {len(daftar_gambar)} foto. Kurangi pilihanmu terlebih dahulu.")
@@ -236,12 +246,14 @@ if daftar_gambar:
             img_array = np.array(img_resized) / 255.0
             img_array = np.expand_dims(img_array, axis=0)
             
-            # Prediksi
-            predictions = model.predict(img_array)
-            predicted_idx = np.argmax(predictions[0])
-            confidence = np.max(predictions[0]) * 100
-            label_key = CLASS_NAMES[predicted_idx]
-            detail = INFO_SAMPAH[label_key]
+            # Prediksi & Ambil 3 Kemungkinan Teratas (Top-3)
+            predictions = model.predict(img_array)[0]
+            top3_indices = np.argsort(predictions)[::-1][:3]
+            
+            top1_idx = top3_indices[0]
+            top1_conf = predictions[top1_idx] * 100
+            top1_key = CLASS_NAMES[top1_idx]
+            detail1 = INFO_SAMPAH[top1_key]
             
             st.markdown('<div class="result-card">', unsafe_allow_html=True)
             col1, col2 = st.columns([1, 2.3])
@@ -250,13 +262,29 @@ if daftar_gambar:
                 st.image(image, caption=f"Foto {idx+1}: {item['name']}", use_container_width=True)
                 
             with col2:
-                st.subheader(f"🏷️ {detail['nama']} ({label_key})")
-                st.markdown(f"**Kategori Kelas:** `{detail['kelas_utama']}` | **Tingkat Keyakinan AI:** `{confidence:.2f}%`")
+                st.subheader(f"🏷️ Prediksi Utama: {detail1['nama']} ({top1_key})")
+                st.markdown(
+                    f"**Kategori Kelas:** `{detail1['kelas_utama']}` &nbsp;|&nbsp; "
+                    f"<span class='badge-score'>Keyakinan AI: {top1_conf:.2f}%</span>", 
+                    unsafe_allow_html=True
+                )
                 
-                if confidence < 65.0:
-                    st.warning("⚠️ *Catatan: Tingkat keyakinan AI rendah. Objek mungkin merupakan kerajinan daur ulang yang bentuknya sudah berubah dari sampah mentah.*")
+                # Jika keyakinan di bawah 75%, tampilkan 3 kemungkinan yang dicurigai AI!
+                if top1_conf < 75.0:
+                    st.warning("🤔 **AI Ragu / Keyakinan Rendah (<75%)** — Objek ini bertumpuk, ramai latar belakangnya, atau sudah berbentuk kerajinan daur ulang. Berikut **3 kemungkinan jenis sampah** yang dicurigai AI:")
+                    
+                    for rank, c_idx in enumerate(top3_indices, start=1):
+                        c_key = CLASS_NAMES[c_idx]
+                        c_conf = predictions[c_idx] * 100
+                        c_info = INFO_SAMPAH[c_key]
+                        with st.expander(f"Kemungkinan #{rank}: {c_info['nama']} ({c_key}) — {c_conf:.2f}%", expanded=(rank == 2)):
+                            st.write(f"**Kategori Kelas:** `{c_info['kelas_utama']}`")
+                            st.write(f"**Saran Pengelolaan:** {c_info['keterangan']}")
+                            st.markdown(f"**{c_info['aksi_judul']}** [{c_info['link_aksi_nama']}]({c_info['link_aksi_url']})")
+                            st.markdown(f"**Tutorial:** [{c_info['link_video_nama']}]({c_info['link_video_url']})")
                 
-                st.write(f"**Saran Pengelolaan:** {detail['keterangan']}")
-                st.markdown(f"**{detail['aksi_judul']}** [{detail['link_aksi_nama']}]({detail['link_aksi_url']})")
-                st.markdown(f"**Tutorial Pengolahan:** [{detail['link_video_nama']}]({detail['link_video_url']})")
+                st.markdown("---")
+                st.write(f"**Saran Pengelolaan (Prediksi Utama):** {detail1['keterangan']}")
+                st.markdown(f"**{detail1['aksi_judul']}** [{detail1['link_aksi_nama']}]({detail1['link_aksi_url']})")
+                st.markdown(f"**Tutorial Pengolahan:** [{detail1['link_video_nama']}]({detail1['link_video_url']})")
             st.markdown('</div>', unsafe_allow_html=True)

@@ -15,12 +15,82 @@ st.markdown("""
         background: linear-gradient(135deg, #d4f1f4 0%, #d8f3dc 50%, #cdeac0 100%) !important;
     }
     /* Paksa semua teks biasa berwarna gelap agar terbaca jelas */
-    .stApp p, .stApp label, .stApp li, .stApp div {
+    .stApp p, .stApp label, .stApp li, .stApp span {
         color: #102a43 !important;
     }
     h1, h2, h3 {
         color: #005f73 !important;
     }
+    
+    /* === CERAHKAN AREA UPLOAD & HILANGKAN BLOK HITAM === */
+    section[data-testid="stFileUploaderDropzone"] {
+        background-color: #ffffff !important;
+        border: 2px dashed #0a9396 !important;
+        border-radius: 14px !important;
+        padding: 16px !important;
+    }
+    section[data-testid="stFileUploaderDropzone"] div,
+    section[data-testid="stFileUploaderDropzone"] span,
+    section[data-testid="stFileUploaderDropzone"] small {
+        color: #005f73 !important;
+    }
+    /* Tombol 'Upload' / 'Browse files' dibuat cerah hijau toska dengan tulisan PUTIH TERANG */
+    section[data-testid="stFileUploaderDropzone"] button {
+        background-color: #00897b !important;
+        color: #ffffff !important;
+        border: none !important;
+        border-radius: 8px !important;
+        padding: 8px 18px !important;
+        font-weight: bold !important;
+    }
+    section[data-testid="stFileUploaderDropzone"] button:hover {
+        background-color: #00695c !important;
+    }
+    section[data-testid="stFileUploaderDropzone"] button * {
+        color: #ffffff !important;
+    }
+
+    /* === CERAHKAN TOMBOL + TAMBAH GAMBAR (POPOVER) === */
+    div[data-testid="stPopover"] > button {
+        background-color: #00897b !important;
+        color: #ffffff !important;
+        border-radius: 12px !important;
+        padding: 10px 22px !important;
+        font-size: 1.05em !important;
+        font-weight: bold !important;
+        border: none !important;
+        box-shadow: 0 4px 10px rgba(0, 137, 123, 0.25) !important;
+    }
+    div[data-testid="stPopover"] > button * {
+        color: #ffffff !important;
+    }
+    /* Isi kotak popup saat tombol + diklik */
+    div[data-testid="stPopoverBody"] {
+        background-color: #f0fdf4 !important;
+        border: 2px solid #0a9396 !important;
+        border-radius: 14px !important;
+    }
+    /* Hilangkan blok hitam di sekitar tombol Paste */
+    iframe[title="streamlit_paste_button.paste_image_button"] {
+        background-color: transparent !important;
+    }
+
+    /* === CERAHKAN KAMERA === */
+    div[data-testid="stCameraInput"] {
+        background-color: #ffffff !important;
+        padding: 12px !important;
+        border-radius: 14px !important;
+        border: 2px solid #0a9396 !important;
+    }
+    div[data-testid="stCameraInput"] button {
+        background-color: #00897b !important;
+        color: #ffffff !important;
+        font-weight: bold !important;
+    }
+    div[data-testid="stCameraInput"] button * {
+        color: #ffffff !important;
+    }
+
     /* Tag kategori hijau mint lembut */
     code {
         background-color: #e0f2f1 !important;
@@ -73,6 +143,14 @@ st.markdown("""
         font-size: 0.9em;
         display: inline-block;
     }
+    /* Tombol hapus biasa */
+    div[data-testid="stButton"] > button {
+        background-color: #ffffff !important;
+        color: #c92a2a !important;
+        border: 1.5px solid #ffa8a8 !important;
+        border-radius: 10px !important;
+        font-weight: bold !important;
+    }
     /* Warna link agar jelas terbaca */
     a {
         color: #0077b6 !important;
@@ -83,7 +161,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.title("♻️ EcoSort AI: Sistem Identifikasi & Pengelolaan Sampah")
-st.write("Unggah file foto **atau** tempel (Copy-Paste) gambar sampah dari internet (**Maksimal 5 foto**).")
+st.write("Klik tombol **➕ Tambah Gambar** di bawah untuk mengunggah foto, menempel gambar hasil *copy*, atau mengambil foto langsung dari kamera (**Maksimal 5 foto**).")
 
 # 2. Load Model AI
 @st.cache_resource
@@ -218,58 +296,92 @@ INFO_SAMPAH = {
 
 CLASS_NAMES = sorted(list(INFO_SAMPAH.keys()))
 
-# 4. Penyimpanan Sementara untuk Gambar Hasil Copy-Paste
-if "pasted_images" not in st.session_state:
-    st.session_state.pasted_images = []
+# 4. Penyimpanan Sementara untuk Gambar Hasil Copy-Paste & Kamera
+if "extra_images" not in st.session_state:
+    st.session_state.extra_images = []
+if "aktifkan_kamera" not in st.session_state:
+    st.session_state.aktifkan_kamera = False
 
-# 5. Area Input: Tab Upload File & Tab Copy-Paste Gambar
-tab1, tab2 = st.tabs(["📁 Unggah File Gambar", "📋 Copy-Paste Gambar (Ctrl+V)"])
+# 5. Menu Input Terpadu di Halaman yang Sama (Dalam Tanda +)
+col_plus, col_reset, col_spacer = st.columns([1.6, 1.8, 3])
 
-uploaded_files = []
-with tab1:
-    files_from_disk = st.file_uploader(
-        "Pilih gambar dari perangkat (JPG, JPEG, PNG — Maksimal 5 foto)", 
-        type=["jpg", "jpeg", "png"], 
-        accept_multiple_files=True
-    )
-    if files_from_disk:
-        uploaded_files = files_from_disk
-
-with tab2:
-    st.write("Salin gambar dari Google (Klik kanan gambar > *Copy image*), lalu klik tombol di bawah ini:")
-    col_paste, col_clear = st.columns([2, 1])
-    with col_paste:
+with col_plus:
+    with st.popover("➕ Tambah / Pilih Sumber Gambar", use_container_width=True):
+        st.markdown("### Pilih Cara Memasukkan Gambar:")
+        
+        # Opsi 1: Upload Gambar dari Perangkat
+        st.markdown("**1. 📁 Upload Gambar dari File**")
+        files_from_disk = st.file_uploader(
+            "Pilih maksimal 5 file (JPG, JPEG, PNG)", 
+            type=["jpg", "jpeg", "png"], 
+            accept_multiple_files=True,
+            key="uploader_utama"
+        )
+        
+        st.divider()
+        
+        # Opsi 2: Copy / Tempel Gambar dari Clipboard
+        st.markdown("**2. 📋 Copy-Paste Gambar (Clipboard)**")
+        st.caption("Klik kanan gambar di Google > *Copy image*, lalu klik tombol di bawah:")
         paste_result = paste_image_button(
-            label="📋 Tempel Gambar dari Clipboard",
+            label="📋 Tempel Gambar Sekarang",
             background_color="#00897b",
             hover_background_color="#00695c",
             errors="ignore"
         )
-    with col_clear:
-        if st.button("🗑️ Hapus Semua Tempelan"):
-            st.session_state.pasted_images = []
+        
+        st.divider()
+        
+        # Opsi 3: Ambil Gambar Pakai Kamera
+        st.markdown("**3. 📷 Ambil Foto dari Kamera**")
+        if st.button("📷 Buka / Tutup Kamera", use_container_width=True):
+            st.session_state.aktifkan_kamera = not st.session_state.aktifkan_kamera
             st.rerun()
 
-    if paste_result.image_data is not None:
-        img_bytes = io.BytesIO()
-        paste_result.image_data.save(img_bytes, format="PNG")
-        img_val = img_bytes.getvalue()
-        if not any(item["bytes"] == img_val for item in st.session_state.pasted_images):
-            if len(st.session_state.pasted_images) < 5:
-                st.session_state.pasted_images.append({
-                    "image": paste_result.image_data.convert("RGB"),
-                    "bytes": img_val,
-                    "name": f"Gambar_Tempel_{len(st.session_state.pasted_images)+1}.png"
+with col_reset:
+    if st.session_state.extra_images:
+        if st.button("🗑️ Hapus Gambar Tempel / Kamera", use_container_width=True):
+            st.session_state.extra_images = []
+            st.rerun()
+
+# Tampilkan Jendela Kamera di Halaman Utama jika Opsi Kamera Diaktifkan
+if st.session_state.aktifkan_kamera:
+    st.info("📷 **Mode Kamera Aktif:** Arahkan sampah ke kamera lalu klik tombol **Take Photo**.")
+    cam_photo = st.camera_input("Ambil Foto Sampah")
+    if cam_photo is not None:
+        cam_bytes = cam_photo.getvalue()
+        if not any(item["bytes"] == cam_bytes for item in st.session_state.extra_images):
+            if len(st.session_state.extra_images) < 5:
+                st.session_state.extra_images.append({
+                    "image": Image.open(cam_photo).convert("RGB"),
+                    "bytes": cam_bytes,
+                    "name": f"Foto_Kamera_{len(st.session_state.extra_images)+1}.png"
                 })
             else:
-                st.warning("⚠️ Sudah mencapai batas maksimal 5 gambar tempelan!")
+                st.warning("⚠️ Sudah mencapai batas maksimal 5 foto!")
 
-# Gabungkan daftar gambar
+# Simpan gambar hasil Copy-Paste ke daftar
+if paste_result.image_data is not None:
+    img_bytes = io.BytesIO()
+    paste_result.image_data.save(img_bytes, format="PNG")
+    img_val = img_bytes.getvalue()
+    if not any(item["bytes"] == img_val for item in st.session_state.extra_images):
+        if len(st.session_state.extra_images) < 5:
+            st.session_state.extra_images.append({
+                "image": paste_result.image_data.convert("RGB"),
+                "bytes": img_val,
+                "name": f"Gambar_Copy_{len(st.session_state.extra_images)+1}.png"
+            })
+        else:
+            st.warning("⚠️ Sudah mencapai batas maksimal 5 foto!")
+
+# Gabungkan Semua Gambar (dari Upload File + Copy-Paste + Kamera)
 daftar_gambar = []
-for f in uploaded_files:
-    daftar_gambar.append({"image": Image.open(f).convert("RGB"), "name": f.name})
-for p in st.session_state.pasted_images:
-    daftar_gambar.append({"image": p["image"], "name": p["name"]})
+if files_from_disk:
+    for f in files_from_disk:
+        daftar_gambar.append({"image": Image.open(f).convert("RGB"), "name": f.name})
+for item_extra in st.session_state.extra_images:
+    daftar_gambar.append({"image": item_extra["image"], "name": item_extra["name"]})
 
 # 6. Proses Prediksi & Tampilkan Top-3 Kemungkinan
 if daftar_gambar:

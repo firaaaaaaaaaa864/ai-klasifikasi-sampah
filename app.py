@@ -5,7 +5,7 @@ import numpy as np
 from streamlit_paste_button import paste_image_button
 import io
 
-# 1. Konfigurasi Halaman & Tema Warna Hijau-Biru (Anti Dark-Mode Gelap)
+# 1. Konfigurasi Halaman & Tema Warna Hijau-Biru Terang
 st.set_page_config(page_title="EcoSort AI - Klasifikasi Sampah", page_icon="♻️", layout="wide")
 
 st.markdown("""
@@ -21,7 +21,7 @@ st.markdown("""
     h1, h2, h3 {
         color: #005f73 !important;
     }
-    /* Hilangkan blok hitam pada tag kode (`...`) dan ganti jadi hijau lembut */
+    /* Tag kategori hijau mint lembut */
     code {
         background-color: #e0f2f1 !important;
         color: #004d40 !important;
@@ -29,26 +29,30 @@ st.markdown("""
         border-radius: 6px !important;
         font-weight: bold !important;
     }
-    /* Ubah kotak peringatan (st.warning) dari cokelat gelap menjadi kuning cerah */
-    div[data-testid="stAlert"] {
-        background-color: #fff8e1 !important;
-        border: 1px solid #ffca28 !important;
-        border-left: 6px solid #ffb300 !important;
+    /* Kotak peringatan keraguan kustom berwarna kuning cerah */
+    .warning-box {
+        background-color: #fff9db !important;
+        border: 1.5px solid #ffd43b !important;
+        border-left: 7px solid #f59f00 !important;
         border-radius: 10px !important;
+        padding: 14px 18px !important;
+        margin: 12px 0px !important;
+        color: #493200 !important;
+        font-size: 0.96em !important;
+        line-height: 1.5 !important;
     }
-    div[data-testid="stAlert"] p {
-        color: #5d4037 !important;
-    }
-    /* Ubah kotak Expander (Kemungkinan #1, #2, #3) menjadi putih bersih */
+    /* Ubah kotak Expander menjadi putih bersih */
     div[data-testid="stExpander"] {
         background-color: #ffffff !important;
         border: 1px solid #b2dfdb !important;
         border-radius: 10px !important;
+        margin-bottom: 8px !important;
     }
     div[data-testid="stExpander"] summary {
         background-color: #f0fdf4 !important;
         color: #004d40 !important;
         border-radius: 10px !important;
+        font-weight: 600 !important;
     }
     /* Kotak kartu hasil prediksi */
     .result-card {
@@ -305,15 +309,19 @@ if daftar_gambar:
                     unsafe_allow_html=True
                 )
                 
-                # Jika keyakinan di bawah 75%, tampilkan 3 kemungkinan yang dicurigai AI!
+                # Jika keyakinan di bawah 75%, tampilkan kotak kuning terang + 3 kemungkinan
                 if top1_conf < 75.0:
-                    st.warning("🤔 **AI Ragu / Keyakinan Rendah (<75%)** — Objek ini bertumpuk, ramai latar belakangnya, atau sudah berbentuk kerajinan daur ulang. Berikut **3 kemungkinan jenis sampah** yang dicurigai AI:")
+                    st.markdown("""
+                        <div class="warning-box">
+                            🤔 <b>AI Ragu / Keyakinan Rendah (&lt;75%)</b> — Objek ini bertumpuk, ramai latar belakangnya, atau sudah berbentuk kerajinan daur ulang. Berikut <b>3 kemungkinan jenis sampah</b> yang dicurigai AI:
+                        </div>
+                    """, unsafe_allow_html=True)
                     
                     for rank, c_idx in enumerate(top3_indices, start=1):
                         c_key = CLASS_NAMES[c_idx]
                         c_conf = predictions[c_idx] * 100
                         c_info = INFO_SAMPAH[c_key]
-                        with st.expander(f"Kemungkinan #{rank}: {c_info['nama']} ({c_key}) — {c_conf:.2f}%", expanded=(rank == 2)):
+                        with st.expander(f"Kemungkinan {rank} : {c_info['nama']} ({c_key}) — Perkiraan {c_conf:.0f}%", expanded=(rank == 2)):
                             st.write(f"**Kategori Kelas:** `{c_info['kelas_utama']}`")
                             st.write(f"**Saran Pengelolaan:** {c_info['keterangan']}")
                             st.markdown(f"**{c_info['aksi_judul']}** [{c_info['link_aksi_nama']}]({c_info['link_aksi_url']})")
